@@ -5,6 +5,7 @@ from utils.general import non_max_suppression, scale_coords
 from utils.BaseDetector import baseDet
 from utils.torch_utils import select_device
 from utils.datasets import letterbox
+from thop import profile
 
 class Detector(baseDet):
 
@@ -15,7 +16,7 @@ class Detector(baseDet):
 
     def init_model(self):
 
-        self.weights = 'weights/yolov5s.pt'
+        self.weights = 'weights/head.pt'    # weights/car-person.pt    weights/head.pt
         self.device = '0' if torch.cuda.is_available() else 'cpu'
         self.device = select_device(self.device)
         model = attempt_load(self.weights, map_location=self.device)
@@ -23,8 +24,10 @@ class Detector(baseDet):
         model.half()
         # torch.save(model, 'test.pt')
         self.m = model
-        self.names = model.module.names if hasattr(
-            model, 'module') else model.names
+        # self.names = model.module.names if hasattr(
+        #     model, 'module') else model.names
+        # self.names = ['car','truck','bus','van','person']
+        self.names = ['head']
 
     def preprocess(self, img):
 
@@ -49,6 +52,7 @@ class Detector(baseDet):
         pred = non_max_suppression(pred, self.threshold, 0.4)
 
         pred_boxes = []
+        labels =[]
         for det in pred:
 
             if det is not None and len(det):
@@ -57,12 +61,13 @@ class Detector(baseDet):
 
                 for *x, conf, cls_id in det:
                     lbl = self.names[int(cls_id)]
-                    if not lbl in ['person', 'car', 'truck']:
-                        continue
+                    # if not lbl in ['person', 'car', 'truck']:
+                    #     continue
                     x1, y1 = int(x[0]), int(x[1])
                     x2, y2 = int(x[2]), int(x[3])
                     pred_boxes.append(
                         (x1, y1, x2, y2, lbl, conf))
-
+                    labels.append(lbl)
+        print(len(labels),labels)
         return im, pred_boxes
 
